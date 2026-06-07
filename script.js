@@ -1,143 +1,301 @@
-{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial, sans-serif;
-}
+// CLOCK
 
-body{
-    background:linear-gradient(135deg,#6c63ff,#8e44ad);
-    min-height:100vh;
-    padding:30px;
-    transition:0.3s;
-}
+function updateClock(){
 
-.container{
-    max-width:1000px;
-    margin:auto;
-}
+    const now = new Date();
 
-.header-card{
-    background:white;
-    padding:30px;
-    border-radius:12px;
-    text-align:center;
-    margin-bottom:20px;
-}
+    document.getElementById("clock").innerHTML =
+        now.toLocaleTimeString();
 
-#clock{
-    font-size:3rem;
-    color:#6c63ff;
-}
+    document.getElementById("date").innerHTML =
+        now.toDateString();
 
-#date{
-    margin:10px 0;
-    color:gray;
-}
+    let hour = now.getHours();
 
-.grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-}
+    let greeting = "Good Evening";
 
-.card{
-    background:white;
-    padding:20px;
-    border-radius:12px;
-}
-
-.full{
-    grid-column:span 2;
-}
-
-#timer{
-    font-size:3rem;
-    text-align:center;
-    margin:20px 0;
-    color:#6c63ff;
-}
-
-.buttons button,
-.task-input button,
-.link-input button,
-.name-box button,
-#themeToggle{
-    padding:8px 15px;
-    border:none;
-    border-radius:5px;
-    background:#6c63ff;
-    color:white;
-    cursor:pointer;
-}
-
-.task-input,
-.link-input,
-.name-box{
-    display:flex;
-    gap:10px;
-    margin-bottom:15px;
-}
-
-input{
-    flex:1;
-    padding:8px;
-}
-
-li{
-    list-style:none;
-    padding:10px;
-    margin:8px 0;
-    border:1px solid #ddd;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.task-left{
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-
-.done{
-    text-decoration:line-through;
-    color:gray;
-}
-
-.link-btn{
-    display:inline-block;
-    padding:10px 15px;
-    background:#6c63ff;
-    color:white;
-    text-decoration:none;
-    border-radius:5px;
-    margin:5px;
-}
-
-.dark{
-    background:#121212;
-}
-
-.dark .card,
-.dark .header-card{
-    background:#1f1f1f;
-    color:white;
-}
-
-.dark input{
-    background:#2a2a2a;
-    color:white;
-    border:1px solid #444;
-}
-
-@media(max-width:768px){
-
-    .grid{
-        grid-template-columns:1fr;
+    if(hour < 12){
+        greeting = "Good Morning";
+    }
+    else if(hour < 18){
+        greeting = "Good Afternoon";
     }
 
-    .full{
-        grid-column:span 1;
+    let savedName = localStorage.getItem("username") || "";
+
+    document.getElementById("greeting").innerHTML =
+        greeting + (savedName ? ", " + savedName : "");
+}
+
+setInterval(updateClock,1000);
+updateClock();
+
+
+// SAVE NAME
+
+function saveName(){
+
+    let name =
+        document.getElementById("username").value;
+
+    localStorage.setItem("username",name);
+
+    updateClock();
+}
+
+
+// TIMER
+
+let timeLeft = 1500;
+let timerInterval;
+
+function updateTimer(){
+
+    let minutes =
+        Math.floor(timeLeft/60);
+
+    let seconds =
+        timeLeft % 60;
+
+    document.getElementById("timer").innerHTML =
+        `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+}
+
+function startTimer(){
+
+    if(timerInterval) return;
+
+    timerInterval = setInterval(()=>{
+
+        if(timeLeft > 0){
+            timeLeft--;
+            updateTimer();
+        }
+
+    },1000);
+}
+
+function stopTimer(){
+
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+function resetTimer(){
+
+    stopTimer();
+
+    timeLeft = 1500;
+
+    updateTimer();
+}
+
+updateTimer();
+
+
+// TASKS
+
+let tasks =
+JSON.parse(localStorage.getItem("tasks")) || [];
+
+function saveTasks(){
+
+    localStorage.setItem(
+        "tasks",
+        JSON.stringify(tasks)
+    );
+}
+
+function renderTasks(){
+
+    let taskList =
+    document.getElementById("taskList");
+
+    taskList.innerHTML = "";
+
+    tasks.forEach((task,index)=>{
+
+        let li =
+        document.createElement("li");
+
+        li.innerHTML = `
+            <div class="task-left">
+                <input type="checkbox"
+                ${task.done ? "checked" : ""}
+                onchange="toggleTask(${index})">
+
+                <span class="${task.done ? "done" : ""}">
+                    ${task.text}
+                </span>
+            </div>
+
+            <div>
+                <button onclick="editTask(${index})">
+                    Edit
+                </button>
+
+                <button onclick="deleteTask(${index})">
+                    Delete
+                </button>
+            </div>
+        `;
+
+        taskList.appendChild(li);
+
+    });
+
+}
+
+function addTask(){
+
+    let input =
+    document.getElementById("taskInput");
+
+    let text = input.value.trim();
+
+    if(text === "") return;
+
+    // Prevent Duplicate Tasks
+
+    let exists =
+    tasks.some(task =>
+        task.text.toLowerCase() ===
+        text.toLowerCase()
+    );
+
+    if(exists){
+        alert("Task already exists!");
+        return;
+    }
+
+    tasks.push({
+        text:text,
+        done:false
+    });
+
+    saveTasks();
+    renderTasks();
+
+    input.value = "";
+}
+
+function toggleTask(index){
+
+    tasks[index].done =
+    !tasks[index].done;
+
+    saveTasks();
+    renderTasks();
+}
+
+function deleteTask(index){
+
+    tasks.splice(index,1);
+
+    saveTasks();
+    renderTasks();
+}
+
+function editTask(index){
+
+    let newText =
+    prompt(
+        "Edit Task",
+        tasks[index].text
+    );
+
+    if(newText){
+
+        tasks[index].text = newText;
+
+        saveTasks();
+        renderTasks();
     }
 }
+
+renderTasks();
+
+
+// QUICK LINKS
+
+let links =
+JSON.parse(localStorage.getItem("links")) || [];
+
+function saveLinks(){
+
+    localStorage.setItem(
+        "links",
+        JSON.stringify(links)
+    );
+}
+
+function renderLinks(){
+
+    let container =
+    document.getElementById("linksContainer");
+
+    container.innerHTML = "";
+
+    links.forEach(link=>{
+
+        let a =
+        document.createElement("a");
+
+        a.href = link.url;
+
+        a.target = "_blank";
+
+        a.className = "link-btn";
+
+        a.innerHTML = link.name;
+
+        container.appendChild(a);
+    });
+}
+
+function addLink(){
+
+    let name =
+    document.getElementById("linkName").value;
+
+    let url =
+    document.getElementById("linkUrl").value;
+
+    if(name === "" || url === "") return;
+
+    links.push({
+        name:name,
+        url:url
+    });
+
+    saveLinks();
+    renderLinks();
+
+    document.getElementById("linkName").value = "";
+    document.getElementById("linkUrl").value = "";
+}
+
+renderLinks();
+
+
+// DARK MODE
+
+const themeBtn =
+document.getElementById("themeToggle");
+
+if(localStorage.getItem("theme") === "dark"){
+    document.body.classList.add("dark");
+}
+
+themeBtn.addEventListener("click",()=>{
+
+    document.body.classList.toggle("dark");
+
+    let mode =
+    document.body.classList.contains("dark")
+    ? "dark"
+    : "light";
+
+    localStorage.setItem("theme",mode);
+
+});
